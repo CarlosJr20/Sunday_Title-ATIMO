@@ -30,7 +30,7 @@ if ($today != $recent_file_year) {
         }
     }
 }else{
-    $url = "http://feed.evangelizo.org/v2/reader.php?date=$recent_file&type=all&lang=AM";
+    $url = "http://feed.evangelizo.org/v2/reader.php?date=$recent_file&type=liturgic_t&lang=AM";
     $h = fopen($url,"r");
     if ($h) {
         $firstLine = fgets($h);

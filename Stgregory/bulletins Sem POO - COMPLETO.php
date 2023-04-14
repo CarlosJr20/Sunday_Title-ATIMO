@@ -1,53 +1,44 @@
 <?php
-$year = date('Y');
-$today = date('Ymd');
-$folder = '../../bulletins/'.$year.'/';
-$files = scandir($folder);
-$files = array_diff($files, array('.', '..'));
-usort($files, function($a, $b) use ($folder) {
-    return filemtime($folder . $a) < filemtime($folder . $b);
-});
-$recent_file = reset($files);
-$recent_file = pathinfo($recent_file, PATHINFO_FILENAME);
-$recent_file_year = substr($recent_file, 0, 4); 
-$recent_file_month = substr($recent_file, 4, 2); 
-$recent_file_day = substr($recent_file, 6, 2); 
-$url = "http://feed.evangelizo.org/v2/reader.php?date=$recent_file&type=all&lang=AM";
-$today_year = substr($today, 0, 4);
-$today_month = substr($today, 4, 2);
-$today_day = substr($today, 6, 2);
+require_once '../../wwb.atimo.us/library/includes/data_cnx.php';
 
-if ($year != $recent_file_year && ($recent_file_year.$recent_file_month.$recent_file_day < $today_year.$today_month.$today_day)) {
+$folder   = $_SERVER['DOCUMENT_ROOT'];
+$folder  .= '\\ctm\\'.trim($pg_variables['customer_number']).'\\projects\\'.trim($pg_variables['project_folder']).'\\bulletins\\';
 
-    foreach ($files as $file) {
-        $file_year = substr($file, 0, 4);
-        $file_month = substr($file, 4, 2);
-        $file_day = substr($file, 6, 2);
-        if ($file_year == $today_year && ($file_year.$file_month.$file_day > $today_year.$today_month.$today_day)) {
-            $recent_file_year = $file_year;
-            $recent_file_month = $file_month;
-            $recent_file_day = $file_day;
-            $h = fopen($url,"r");
-            if ($h) {
-                $firstLine = fgets($h);
-                fclose($h);
-                $information = trim($firstLine);
-                echo $information;
-            } else {
-                echo  "Erro ao abrir o arquivo.";
-            }
-            break;
-        }
-    }
-} elseif($year == $recent_file_year && $recent_file_month.$recent_file_day >= $today_month.$today_day){
-    $h = fopen($url,"r");
-    if ($h) {
-        $firstLine = fgets($h);
-        fclose($h);
-        $information = trim($firstLine);
-        echo $information ;
+$directories  = glob($folder . "*[0-9]", GLOB_ONLYDIR );
+rsort($directories);
+$year         = str_replace($folder, "", $directories[0]);  
+$search       = scandir($folder.'/'.$year, '0');
+$bulletins    = preg_grep('/(.*?)\.(pdf|PDF)/', $search);
+rsort($bulletins);
+$recent_file  = pathinfo($bulletins[0], PATHINFO_FILENAME);
+
+$filename    = $_SERVER['DOCUMENT_ROOT'] . '\\ctm\\31000\\sunday_title\\' . $recent_file .'.txt';
+if (file_exists($filename)) {
+    $fileContent = file_get_contents($filename);
+    if ($fileContent !== false) {
+        echo $fileContent;
     } else {
-        echo  "Erro ao abrir o arquivo.";
+        echo "Error!";
+    }
+} else {
+    $url = "http://feed.evangelizo.org/v2/reader.php?date=$recent_file&type=all&lang=AM";
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 5); // Definir o timeout em segundos (neste exemplo, 5 segundos)
+    $h = fopen($url,"r");
+    $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    if ($http_code != 200) {
+        $firstLine   = fgets($h);
+        fclose($h);
+        curl_close($ch);
+        $information = trim($firstLine);
+        $file        = fopen($filename, "w");
+        fwrite($file, $information);
+        fclose($file);
+        echo $information;
+    } else {
+        echo "Error! File";
     }
 }
 ?>
